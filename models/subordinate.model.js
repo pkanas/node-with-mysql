@@ -1,18 +1,15 @@
 module.exports = (sequelize, Sequelize) => {
-    const Tutorial = sequelize.define("customer", {
+    const Subordinate = sequelize.define("subordinate", {
       name: {
         type: Sequelize.STRING
       },
       designation: {
         type: Sequelize.STRING
       },
-      email: {
-        type: Sequelize.STRING
-      },
-      qualification: {
+      customerEmail: {
         type: Sequelize.STRING
       }
     });
   
-    return Tutorial;
+    return Subordinate;
   };

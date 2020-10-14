@@ -1,9 +1,24 @@
 const db = require("../models");
 const Customer = db.customers;
+const Subordinate = db.subordinates;
 const Op = db.Sequelize.Op;
 
+
+
+/*
+ http://localhost:3030/api/customers
+Request Method: POST
+{
+"designation": "Tjukud"
+"email": "test@gmail.com"
+"name": "Teshy"
+"qualification": "MBA"
+"subordinate": [{"sname": "Mike", "sdesignation": "MGR 2"}, {"sname": "Joke", "sdesignation": "MGR #"}]
+}
+*/
 // Create and Save a new Customer
 exports.create = (req, res) => {
+    
     // Validate request
     if (!req.body.name) {
       res.status(400).send({
@@ -23,6 +38,9 @@ exports.create = (req, res) => {
     // Save Customer in the database
     Customer.create(customer)
       .then(data => {
+        console.log(`Insert Customer success`);       
+
+
         res.send(data);
       })
       .catch(err => {
@@ -30,24 +48,58 @@ exports.create = (req, res) => {
           message:
             err.message || "Some error occurred while creating the Customer."
         });
-      });
+    });    
   };
 
+/*
+[
+    {
+        "id": 6,
+        "name": "Teshy",
+        "designation": "Tjukud",
+        "email": "test@gmail.com",
+        "qualification": "MBA",
+        "createdAt": "2020-10-14T11:08:22.000Z",
+        "updatedAt": "2020-10-14T11:08:22.000Z"
+    }
+]
+ */
 // Retrieve all Customer from the database.
 exports.findAll = (req, res) => {
     const name = req.query.name;
     var condition = name ? { name: { [Op.like]: `%${name}%` } } : null;
+
+    Subordinate.findAll().then(sOrdList=>{
+      Customer.findAll({ where: condition })
+        .then(dbCustomersList => {
+          var finalCustomersList = [];
+          dbCustomersList.forEach((cust, index)=>{
+            var currentSubordinates = sOrdList.filter(sOrd=>{
+              return sOrd.customerEmail==cust.email;
+            });
+            var currentCustomer = {
+              id: cust.id,
+              name: cust.name,
+              designation: cust.designation,
+              email: cust.email,
+              qualification: cust.qualification,
+              createdAt: cust.createdAt,
+              updatedAt: cust.updatedAt,
+              subordinates: currentSubordinates
+            };
+            finalCustomersList.push(currentCustomer);    
+          });
+          res.send(finalCustomersList);
+        })
+        .catch(err => {
+          res.status(500).send({
+            message:
+              err.message || "Some error occurred while retrieving Customer."
+          });
+        }
+      );
+    });
   
-    Customer.findAll({ where: condition })
-      .then(data => {
-        res.send(data);
-      })
-      .catch(err => {
-        res.status(500).send({
-          message:
-            err.message || "Some error occurred while retrieving Customer."
-        });
-      });
   };
 
 // Find a single Customer with an id
@@ -148,12 +200,23 @@ exports.create = (req, res) => {
       name: req.body.name,
       designation: req.body.designation,
       email: req.body.email,
-      qualification: req.body.qualification,
+      qualification: req.body.qualification
     };
   
     // Save Customer in the database
     Customer.create(customer)
       .then(data => {
+        req.body.subordinate.forEach((sOrd)=>{
+          var subordinatePayload = {
+            customerEmail: req.body.email,
+            name: sOrd.sname,
+            designation: sOrd.sdesignation,
+          };
+          
+          console.log(sOrd.sname);
+      
+          Subordinate.create(subordinatePayload).then(data=>{ console.log(sOrd.sname);});
+        });
         res.send(data);
       })
       .catch(err => {
